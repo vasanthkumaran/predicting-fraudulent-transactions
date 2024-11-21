@@ -1,0 +1,132 @@
+Fraud detection 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from imblearn.over_sampling import SMOTE
+%matplotlib inline
+df = pd.read_csv('Fraud.csv')
+df.head()
+
+Exploratory Data Analysis
+df.shape
+df.describe()
+df.dtypes
+
+df.isna().sum()
+
+duplicate = df[df.duplicated()] 
+print("Duplicate Rows :")
+duplicate
+
+sns.countplot(df['type'])
+
+df['isFraud'].value_counts()
+
+plt.pie(df['isFraud'].value_counts(),  autopct='%.2f%%')
+
+
+df.nunique()
+
+
+pd.set_option('display.float_format', '{:.2f}'.format) # To see actual values
+df.describe()
+
+df.describe(include='object') #checking onl for categorical features
+
+#check for correlation
+plt.figure(figsize=(10,5))
+sns.heatmap(df.corr(),annot=True)
+
+Feature Engineering
+from sklearn.preprocessing import LabelEncoder
+encoder = {}
+for i in df.select_dtypes('object').columns:
+    encoder[i] = LabelEncoder()
+    df[i] = encoder[i].fit_transform(df[i])
+df.head()
+
+
+x = df.drop(columns=['isFraud'])
+y = df['isFraud']
+
+y.value_counts() #class 1 is minority class
+
+over_sample = SMOTE(random_state=0)
+x,y = over_sample.fit_resample(x,y)
+
+y.value_counts() #resampled
+
+Scaling values---
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+x = scaler.fit_transform(x)
+
+Train test split--
+from sklearn.model_selection import train_test_split
+x_train, x_test, y_train, y_test = train_test_split(x,y,test_size=0.30,random_state=0)
+
+
+Model training : Logistic Regression---
+from sklearn.linear_model import LogisticRegression
+log_reg = LogisticRegression()
+log_reg.fit(x_train,y_train)
+
+
+y_pred = log_reg.predict(x_test)
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+confusion_matrix(y_test,y_pred)
+
+
+accuracy_score(y_test, y_pred)
+
+
+
+print(classification_report(y_test,y_pred))
+      
+
+from sklearn.model_selection import cross_val_score
+
+cvs = cross_val_score(log_reg,x,y,cv=3)
+print(cvs)
+
+
+cvs.mean()
+
+
+
+Improving accuracy
+Select the best 8 features
+
+from sklearn.feature_selection import chi2, SelectKBest
+
+best_fea = SelectKBest(chi2,k=8)
+kbest = best_fea.fit_transform(x,y)
+np.array(df.drop(columns=['isFraud']).columns)[best_fea.get_support()]
+
+
+pd.DataFrame(list(zip(df.drop(columns=['isFraud']).columns, best_fea.scores_)),columns=['features','scores']).sort_values(by='scores',ascending=False)
+
+
+x_new = df[['step', 'type', 'amount', 'oldbalanceOrg', 'newbalanceOrig','nameDest', 'oldbalanceDest', 'isFlaggedFraud']]
+y_new = df['isFraud']
+
+
+x_new_train, x_new_test, y_new_train, y_new_test = train_test_split(x_new, y_new, test_size=0.30, random_state=0)
+
+
+log_reg1 = LogisticRegression()
+log_reg1.fit(x_new_train,y_new_train)
+
+
+
+y2_pred = log_reg1.predict(x_new_test)
+confusion_matrix(y_new_test,y2_pred)
+
+
+accuracy_score(y_new_test,y2_pred)
+
+
+print(classification_report(y_new_test,y2_pred))
+           
+   
